@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluid Flow Intuition Tool</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- jsPDF for export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <h1>AeroFlow <span>Intuition Tool</span></h1>
+    </div>
+    <div class="header-actions">
+      <button id="pres-straight" class="btn btn-outline">Straight Pipe</button>
+      <button id="pres-venturi" class="btn btn-outline">Venturi</button>
+      <button id="pres-bends" class="btn btn-outline">Bends</button>
+      <button id="export-pdf" class="btn btn-primary">Export PDF</button>
+    </div>
+  </header>
+
+  <main class="app-grid">
+    <!-- Left Panel: Components -->
+    <aside class="panel left-panel">
+      <div class="panel-header">
+        <h2>System Components</h2>
+      </div>
+      <div class="components-list" id="components-list">
+        <!-- Rendered via JS -->
+      </div>
+      <div class="add-components">
+        <button class="btn btn-secondary" onclick="ui.addComponent('pipe')">+ Pipe</button>
+        <button class="btn btn-secondary" onclick="ui.addComponent('contraction')">+ Transition</button>
+        <button class="btn btn-secondary" onclick="ui.addComponent('bend')">+ Bend</button>
+        <button class="btn btn-secondary" onclick="ui.addComponent('valve')">+ Valve</button>
+      </div>
+    </aside>
+
+    <!-- Center: Visualization & Charts -->
+    <section class="center-panel">
+      <div class="canvas-container">
+        <canvas id="flow-canvas"></canvas>
+      </div>
+      <div class="charts-container">
+        <div class="chart-box">
+          <h3>Pressure vs Distance</h3>
+          <canvas id="pressure-chart"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Velocity vs Distance</h3>
+          <canvas id="velocity-chart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Parameters & What-If -->
+    <aside class="panel right-panel">
+      <div class="panel-header">
+        <h2>Global Parameters</h2>
+      </div>
+      <div class="form-group">
+        <label>Fluid Type</label>
+        <select id="fluid-type">
+          <option value="water">Water</option>
+          <option value="air">Air</option>
+          <option value="oil">Oil</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Inlet Velocity (m/s)</label>
+        <input type="range" id="inlet-velocity" min="0.1" max="20" step="0.1" value="2">
+        <span class="val-display" id="inlet-velocity-val">2 m/s</span>
+      </div>
+      <div class="form-group">
+        <label>Inlet Pressure (Pa)</label>
+        <input type="range" id="inlet-pressure" min="1000" max="500000" step="1000" value="101325">
+        <span class="val-display" id="inlet-pressure-val">101325 Pa</span>
+      </div>
+      
+      <div class="panel-header mt-4">
+        <h2>Component Properties</h2>
+      </div>
+      <div id="inspector" class="inspector-panel">
+        <p class="empty-state">Select a component to edit.</p>
+        <!-- Dynamic property editor -->
+      </div>
+
+      <div class="panel-header mt-4">
+        <h2>Insight Panel</h2>
+      </div>
+      <div class="insight-box" id="insight-box">
+        <p>No changes detected yet. Modify a parameter to see insights.</p>
+      </div>
+
+      <div class="system-stats">
+        <div class="stat-row">
+          <span>Flow Regime</span>
+          <span id="stat-regime" class="badge">Laminar</span>
+        </div>
+        <div class="stat-row">
+          <span>Total Pressure Drop</span>
+          <span id="stat-drop">0 Pa</span>
+        </div>
+        <div class="stat-row">
+          <span>Max Velocity</span>
+          <span id="stat-vmax">0 m/s</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="js/geometry.js"></script>
+  <script src="js/physics.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
