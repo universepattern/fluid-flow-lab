@@ -1,92 +1,70 @@
 class PhysicsEngine {
   constructor() {
-    this.results = [];
-    this.totalPressureDrop = 0;
-    this.globalMaxV = 0;
-    this.systemRegime = 'Laminar';
+    this.segmentsCount = 20;
   }
 
-  solve(graph, params) {
-    this.results = [];
-    this.totalPressureDrop = 0;
-    this.globalMaxV = 0;
-
-    const { nodes, edges, scale } = graph;
-    if (edges.length === 0) return this.results;
-
-    const rho = params.rho || 998;
-    const mu = params.mu || 0.001001;
-    const Q = params.q || 0.01;
-    let currentP = params.inletPressure || 101325;
+  solve(params) {
+    const { L, dStart, dEnd, Q, rho, mu } = params;
     
-    let currentDistance = 0;
+    const results = [];
+    let cumulativeDrop = 0;
+    
+    // Safety check
+    if (L <= 0 || dStart <= 0 || dEnd <= 0 || Q <= 0) return { segments: [], stats: {} };
+
+    const dL = L / this.segmentsCount;
+    let maxV = 0;
     let maxRe = 0;
 
-    // Follow edges in order of creation (assuming simple sequential network)
-    for (const edge of edges) {
-      const n1 = nodes.find(n => n.id === edge.from);
-      const n2 = nodes.find(n => n.id === edge.to);
-      if (!n1 || !n2) continue;
-
-      const pxLength = Math.sqrt((n2.x - n1.x)**2 + (n2.y - n1.y)**2);
-      const L = pxLength * scale;
-      const D = edge.diameter || 0.1;
+    for (let i = 0; i < this.segmentsCount; i++) {
+      // Find diameter at the middle of this segment
+      const fraction = (i + 0.5) / this.segmentsCount;
+      const D = dStart + (dEnd - dStart) * fraction;
+      
       const A = Math.PI * Math.pow(D / 2, 2);
       const V = Q / A;
-      
       const Re = (rho * V * D) / mu;
-      
-      // Calculate Friction Factor
+
       let f = 0;
       if (Re < 2300) {
         f = 64 / Math.max(Re, 1);
       } else {
-        // Simplified Haaland/Blasius or fixed for high roughness
-        // We'll use Blasius as an approximation if roughness isn't extreme
         f = 0.316 * Math.pow(Math.max(Re, 1), -0.25);
-        // Include roughness effect roughly
-        if (edge.roughness) {
-           // simple asymptotic offset for turbulent flow
-           f += edge.roughness / D;
-        }
       }
 
-      // Darcy-Weisbach head loss -> pressure drop
-      // dP = f * (L/D) * (rho * V^2 / 2)
-      const majorDrop = f * (L / D) * (0.5 * rho * V * V);
+      // Darcy Weisbach
+      const dP = f * (dL / D) * (0.5 * rho * V * V);
       
-      // Minor loss
-      const K = edge.kFactor || 0;
-      const minorDrop = K * (0.5 * rho * V * V);
+      cumulativeDrop += dP;
+      if (V > maxV) maxV = V;
+      if (Re > maxRe) maxRe = Re;
 
-      const totalDrop = majorDrop + minorDrop;
-      
-      const result = {
-        edgeId: edge.id,
-        length: L,
+      results.push({
+        segmentIndex: i,
+        diameter: D,
         velocity: V,
         Re: Re,
-        majorLossP: majorDrop,
-        minorLossP: minorDrop,
-        totalDrop: totalDrop,
-        inletP: currentP,
-        outletP: currentP - totalDrop,
-        distanceStart: currentDistance,
-        distanceEnd: currentDistance + L
-      };
-
-      currentP -= totalDrop;
-      currentDistance += L;
-      this.totalPressureDrop += totalDrop;
-
-      if (V > this.globalMaxV) this.globalMaxV = V;
-      if (Re > maxRe) maxRe = Re;
-      
-      this.results.push(result);
+        pressureDrop: dP,
+        cumulativeDrop: cumulativeDrop
+      });
     }
-    
-    this.systemRegime = maxRe < 2300 ? 'Laminar' : (maxRe < 4000 ? 'Transitional' : 'Turbulent');
-    return this.results;
+
+    // Inlet / Outlet precise stats
+    const Ain = Math.PI * Math.pow(dStart / 2, 2);
+    const Aout = Math.PI * Math.pow(dEnd / 2, 2);
+    const Vin = Q / Ain;
+    const Vout = Q / Aout;
+
+    return {
+      segments: results,
+      stats: {
+        vin: Vin,
+        vout: Vout,
+        maxV: maxV,
+        maxRe: maxRe,
+        totalDrop: cumulativeDrop
+      }
+    };
   }
 }
 

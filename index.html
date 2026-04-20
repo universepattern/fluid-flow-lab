@@ -3,121 +3,91 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AeroFlow - Interactive Sketch</title>
+  <title>AeroFlow - Single Pipe Simulator</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <header>
     <div class="logo">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <h1>AeroFlow <span>Sketch Lab</span></h1>
-    </div>
-    <div class="header-actions">
-      <div class="toolbar-group">
-         <button id="pres-straight" class="btn btn-outline">Preset: Straight</button>
-         <button id="pres-venturi" class="btn btn-outline">Preset: Venturi</button>
-      </div>
-      <button id="export-pdf" class="btn btn-primary">Export Report PDF</button>
+      <h1>AeroFlow <span>Fluid Simulator</span></h1>
     </div>
   </header>
 
   <main class="app-grid">
-    <!-- Left Panel: Global Settings & Stats -->
+    <!-- Left Panel: Form Inputs -->
     <aside class="panel left-panel">
       <div class="panel-section">
-        <h2>Global Fluid Settings</h2>
+        <h2>Pipe Geometry</h2>
         <div class="input-group">
-          <label>Fluid Presets</label>
-          <select id="fluid-type">
-            <option value="water">Water (20°C)</option>
-            <option value="air">Air (Standard)</option>
-            <option value="oil">Engine Oil</option>
-          </select>
+          <label>Pipe Length (m)</label>
+          <input type="number" id="inp-length" value="10" step="1">
         </div>
         <div class="input-group">
-          <label>Density ρ (kg/m³)</label>
-          <input type="number" id="global-rho" value="998" step="1">
+          <label>Start Diameter (m)</label>
+          <input type="number" id="inp-dstart" value="0.1" step="0.01">
         </div>
         <div class="input-group">
-          <label>Viscosity μ (Pa·s)</label>
-          <input type="number" id="global-mu" value="0.001001" step="0.0001">
-        </div>
-        <div class="input-group">
-          <label>Inlet Flow Rate Q (m³/s)</label>
-          <input type="number" id="global-q" value="0.01" step="0.001">
-        </div>
-        <div class="input-group">
-          <label>Inlet Pressure P (Pa)</label>
-          <input type="number" id="global-p" value="101325" step="1000">
+          <label>End Diameter (m)</label>
+          <input type="number" id="inp-dend" value="0.05" step="0.01">
         </div>
       </div>
 
-      <div class="panel-section stats-section">
-        <h2>System Performance</h2>
-        <div class="stat-row">
-          <span>Max Velocity</span>
-          <span id="stat-vmax">0.00 m/s</span>
+      <div class="panel-section">
+        <h2>Flow State</h2>
+        <div class="input-group">
+          <label>Volumetric Flow Rate (m³/s)</label>
+          <input type="number" id="inp-flowrate" value="0.01" step="0.001">
         </div>
-        <div class="stat-row">
-          <span>Total Pressure Drop</span>
-          <span id="stat-drop">0.0 Pa</span>
+        <div class="input-group">
+          <label>Fluid Density (kg/m³)</label>
+          <input type="number" id="inp-rho" value="998" step="1">
         </div>
-        <div class="stat-row">
-          <span>Flow Regime</span>
-          <span id="stat-regime" class="badge">--</span>
+        <div class="input-group">
+          <label>Fluid Viscosity (Pa·s)</label>
+          <input type="number" id="inp-mu" value="0.001001" step="0.0001">
         </div>
       </div>
     </aside>
 
-    <!-- Center Panel: The Sketch Canvas -->
+    <!-- Center Panel: Results & Canvas -->
     <section class="center-panel">
+      <div class="results-header">
+        <div class="result-card">
+          <span class="res-label">Inlet Velocity</span>
+          <span class="res-val" id="res-vin">0.00 m/s</span>
+        </div>
+        <div class="result-card">
+          <span class="res-label">Outlet Velocity</span>
+          <span class="res-val" id="res-vout">0.00 m/s</span>
+        </div>
+        <div class="result-card">
+          <span class="res-label">Reynolds Number (Max)</span>
+          <span class="res-val" id="res-re">0</span>
+        </div>
+        <div class="result-card">
+          <span class="res-label">Total Pressure Drop</span>
+          <span class="res-val highlight" id="res-drop">0.00 Pa</span>
+        </div>
+      </div>
+      
       <div class="canvas-toolbar">
          <div class="tool-group">
             <span class="tool-label">View Mode:</span>
-            <button id="btn-heatmap-v" class="btn-tool active">Velocity Heatmap</button>
-            <button id="btn-heatmap-p" class="btn-tool">Pressure Heatmap</button>
-         </div>
-         <div class="tool-group">
-            <span class="tool-label">Sketch:</span>
-            <button id="btn-clear" class="btn-tool danger">Clear Canvas</button>
+            <button id="btn-heatmap-v" class="btn-tool active">Velocity Profile</button>
+            <button id="btn-heatmap-p" class="btn-tool">Pressure Profile</button>
          </div>
       </div>
+      
       <div class="canvas-container" id="canvas-container">
-        <!-- Interactive WebGL/Canvas Area -->
-        <canvas id="sketch-canvas"></canvas>
+        <canvas id="flow-canvas"></canvas>
       </div>
     </section>
-
-    <!-- Right Panel: Selection Inspector -->
-    <aside class="panel right-panel">
-      <div class="panel-section">
-        <h2>Selection Properties</h2>
-        <div id="inspector">
-          <div class="empty-state">
-            <p>Select a node or edge on the canvas to view properties.</p>
-            <p class="hint">Click anywhere on grid to add elements.</p>
-          </div>
-        </div>
-      </div>
-      <div class="panel-section graphs-section">
-         <h2>Performance Graphs</h2>
-         <div class="chart-wrapper">
-             <canvas id="pressure-chart"></canvas>
-         </div>
-         <div class="chart-wrapper">
-             <canvas id="velocity-chart"></canvas>
-         </div>
-      </div>
-    </aside>
   </main>
 
-  <script src="js/sketch.js"></script>
   <script src="js/physics.js"></script>
   <script src="js/renderer.js"></script>
-  <script src="js/charts.js"></script>
-  <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
